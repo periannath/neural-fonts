@@ -3,3 +3,5 @@ datasets/
 experiments/
 .DS_Store
 .idea/
+.image/
+*.jpg

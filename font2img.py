@@ -15,21 +15,7 @@ import collections
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-CN_CHARSET = None
-CN_T_CHARSET = None
-JP_CHARSET = None
 KR_CHARSET = None
-
-DEFAULT_CHARSET = "./charset/cjk.json"
-
-
-def load_global_charset():
-    global CN_CHARSET, JP_CHARSET, KR_CHARSET, CN_T_CHARSET
-    cjk = json.load(open(DEFAULT_CHARSET))
-    CN_CHARSET = cjk["gbk"]
-    JP_CHARSET = cjk["jp"]
-    KR_CHARSET = cjk["kr"]
-    CN_T_CHARSET = cjk["gb2312_t"]
 
 
 def draw_single_char(ch, font, canvas_size, x_offset, y_offset):
@@ -90,13 +76,10 @@ def font2img(src, dst, charset, char_size, canvas_size,
                 print("processed %d chars" % count)
 
 
-load_global_charset()
 parser = argparse.ArgumentParser(description='Convert font to images')
 parser.add_argument('--src_font', dest='src_font', required=True, help='path of the source font')
 parser.add_argument('--dst_font', dest='dst_font', required=True, help='path of the target font')
 parser.add_argument('--filter', dest='filter', type=int, default=0, help='filter recurring characters')
-parser.add_argument('--charset', dest='charset', type=str, default='CN',
-                    help='charset, can be either: CN, JP, KR or a one line file')
 parser.add_argument('--shuffle', dest='shuffle', type=int, default=0, help='shuffle a charset before processings')
 parser.add_argument('--char_size', dest='char_size', type=int, default=150, help='character size')
 parser.add_argument('--canvas_size', dest='canvas_size', type=int, default=256, help='canvas size')
@@ -109,10 +92,9 @@ parser.add_argument('--label', dest='label', type=int, default=0, help='label as
 args = parser.parse_args()
 
 if __name__ == "__main__":
-    if args.charset in ['CN', 'JP', 'KR', 'CN_T']:
-        charset = locals().get("%s_CHARSET" % args.charset)
-    else:
-        charset = [c for c in open(args.charset).readline()[:-1].decode("utf-8")]
+    charset = []
+    for i in range(0xac00,0xd7a4):
+      charset.append(unichr(i))
     if args.shuffle:
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,

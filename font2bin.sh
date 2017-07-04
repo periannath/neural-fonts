@@ -1,23 +1,32 @@
 #!/bin/bash
 
-if [ "$#" -ne 2 ]; then
-  echo "Usage : ./font2bin.sh src_font dst_font"
+if [ "$#" -eq 0 ]; then
+  echo "Usage : ./font2bin.sh src_font font_family ( font family ... )"
 else
-  if [[ -f fonts/$1 && -f fonts/$2 ]]; then
-    FONT1=$(echo $1 | awk -F'.' '{print $(NF-1)}')
-    FONT2=$(echo $2 | awk -F'.' '{print $(NF-1)}')
-#    FOLDER=${FONT1}-${FONT2}
-    FOLDER=${FONT1}
-    echo $FOLDER
-#    if [ ! -d image/$FOLDER ]; then
-      echo "font2img.py $FONT1 $FONT2"
-      mkdir -p image/$FOLDER
-      python font2img.py --src_font=fonts/$1 --dst_font=fonts/$2 --sample_count=1000 --sample_dir=image/$FOLDER --label=${FONT2} --filter=1 --shuffle=1
-#    fi
-#    if [ ! -d binary/$FOLDER/data ]; then
-      echo "package.py image/$FOLDER binary/$FOLDER/data"
-      mkdir -p binary/$FOLDER/data
-      python package.py --dir=image/$FOLDER --save_dir=binary/$FOLDER/data
-#    fi
+  if [ -f fonts/$1 ]; then
+    echo "SRC FONT : "$1
+    SRCFONT=$1
+    FOLDER=$(echo $1 | awk -F'.' '{print $(NF-1)}')
+    INDEX=1
+    shift
+    for FAMILY in "$@"
+    do
+      echo "FONT FAMILY : "$FAMILY
+      if [ -d fonts/$FAMILY ]; then
+	for TARGETFONT in $(find fonts/$FAMILY -type f)
+	do
+	  echo "TARGET FONT : "$TARGETFONT
+	  echo "font2img.py $SRCFONT $TARGETFONT"
+	  mkdir -p image/$FOLDER
+	  python font2img.py --src_font=fonts/$SRCFONT --dst_font=fonts/$TARGETFONT --sample_count=1000 --sample_dir=image/$FOLDER --label=${INDEX} --filter=1 --shuffle=1
+	  ((INDEX++))
+	done
+      fi
+    done
+    echo "package.py image/$FOLDER binary/$FOLDER/data"
+    mkdir -p binary/$FOLDER/data
+    python package.py --dir=image/$FOLDER --save_dir=binary/$FOLDER/data
+  else
+    echo "Source font 'fonts/$1' not exist"
   fi
 fi

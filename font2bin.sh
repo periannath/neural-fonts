@@ -6,8 +6,8 @@ else
   if [[ -f fonts/$1 && -f fonts/$2 ]]; then
     FONT1=$(echo $1 | awk -F'.' '{print $(NF-1)}')
     FONT2=$(echo $2 | awk -F'.' '{print $(NF-1)}')
-    FOLDER=${FONT1}-${FONT2}
-#    FOLDER=${FONT1}
+#    FOLDER=${FONT1}-${FONT2}
+    FOLDER=${FONT1}
     echo $FOLDER
 #    if [ ! -d image/$FOLDER ]; then
       echo "font2img.py $FONT1 $FONT2"

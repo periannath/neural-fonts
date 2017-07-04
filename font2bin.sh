@@ -18,7 +18,7 @@ else
 	  echo "TARGET FONT : "$TARGETFONT
 	  echo "font2img.py $SRCFONT $TARGETFONT"
 	  mkdir -p image/$FOLDER
-	  python font2img.py --src_font=fonts/$SRCFONT --dst_font=fonts/$TARGETFONT --sample_count=1000 --sample_dir=image/$FOLDER --label=${INDEX} --filter=1 --shuffle=1
+	  python font2img.py --src_font=fonts/$SRCFONT --dst_font=$TARGETFONT --sample_count=1000 --sample_dir=image/$FOLDER --label=${INDEX} --filter=1 --shuffle=1
 	  ((INDEX++))
 	done
       fi

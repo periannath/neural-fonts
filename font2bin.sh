@@ -9,6 +9,7 @@ else
     FOLDER=$(echo $1 | awk -F'.' '{print $(NF-1)}')
     INDEX=1
     shift
+    echo "Index  FONT" > mapping.log
     for FAMILY in "$@"
     do
       echo "FONT FAMILY : "$FAMILY
@@ -19,6 +20,8 @@ else
 	  echo "font2img.py $SRCFONT $TARGETFONT"
 	  mkdir -p image/$FOLDER
 	  python font2img.py --src_font=fonts/$SRCFONT --dst_font=$TARGETFONT --sample_count=1000 --sample_dir=image/$FOLDER --label=${INDEX} --filter=1 --shuffle=1
+	  TARGET=$(echo $TARGETFONT | awk -F'/' '{print $(NF)}')
+	  echo "  $INDEX    $TARGET" >> mapping.log
 	  ((INDEX++))
 	done
       fi

@@ -19,7 +19,7 @@ else
 	  echo "TARGET FONT : "$TARGETFONT
 	  echo "font2img.py $SRCFONT $TARGETFONT"
 	  mkdir -p image/$FOLDER
-	  python font2img.py --src_font=fonts/$SRCFONT --dst_font=$TARGETFONT --sample_count=1000 --sample_dir=image/$FOLDER --label=${INDEX} --filter=1 --shuffle=1
+	  python font2img-center.py --src_font=fonts/$SRCFONT --dst_font=$TARGETFONT --sample_count=2000 --sample_dir=image/$FOLDER --label=${INDEX} --filter=1 --shuffle=1 --x_offset=53 --y_offset=23
 	  TARGET=$(echo $TARGETFONT | awk -F'/' '{print $(NF)}')
 	  echo "  $INDEX    $TARGET" >> mapping.log
 	  ((INDEX++))

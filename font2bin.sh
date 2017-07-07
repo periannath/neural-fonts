@@ -14,7 +14,7 @@ else
     do
       echo "FONT FAMILY : "$FAMILY
       if [ -d fonts/$FAMILY ]; then
-	for TARGETFONT in $(find fonts/$FAMILY -type f)
+	for TARGETFONT in $(find fonts/$FAMILY -type f | sort)
 	do
 	  echo "TARGET FONT : "$TARGETFONT
 	  echo "font2img.py $SRCFONT $TARGETFONT"

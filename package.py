@@ -39,5 +39,5 @@ args = parser.parse_args()
 if __name__ == "__main__":
     train_path = os.path.join(args.save_dir, "train.obj")
     val_path = os.path.join(args.save_dir, "val.obj")
-    pickle_examples(sorted(glob.glob(os.path.join(args.dir, "*.jpg"))), train_path=train_path, val_path=val_path,
+    pickle_examples(sorted(glob.glob(os.path.join(args.dir, "*.jpg")), key=lambda e: float(os.path.splitext(os.path.basename(e))[0].replace("_",""))), train_path=train_path, val_path=val_path,
                     train_val_split=args.split_ratio)

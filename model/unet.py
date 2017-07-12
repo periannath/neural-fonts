@@ -389,7 +389,7 @@ class UNet(object):
         gen_saver.save(self.sess, os.path.join(save_dir, model_name), global_step=0)
 
     def infer(self, source_obj, embedding_ids, model_dir, save_dir):
-        source_provider = InjectDataProvider(source_obj)
+        source_provider = InjectDataProvider(source_obj, None)
 
         if isinstance(embedding_ids, int) or len(embedding_ids) == 1:
             embedding_id = embedding_ids if isinstance(embedding_ids, int) else embedding_ids[0]
@@ -412,6 +412,42 @@ class UNet(object):
             fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
             merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
             batch_buffer.append(merged_fake_images)
+            if len(batch_buffer) == 10:
+                save_imgs(batch_buffer, count)
+                batch_buffer = list()
+            count += 1
+        if batch_buffer:
+            # last batch
+            save_imgs(batch_buffer, count)
+
+
+    def infer_compare(self, source_obj, embedding_ids, model_dir, save_dir):
+        if isinstance(embedding_ids, int) or len(embedding_ids) == 1:
+            source_provider = InjectDataProvider(source_obj, [embedding_ids])
+            embedding_id = embedding_ids if isinstance(embedding_ids, int) else embedding_ids[0]
+            source_iter = source_provider.get_single_embedding_iter(self.batch_size, embedding_id)
+            source_length = len(source_provider.data.examples)
+        else:
+            source_provider = InjectDataProvider(source_obj, embedding_ids)
+            source_iter = source_provider.get_random_embedding_iter(self.batch_size, embedding_ids)
+
+        tf.global_variables_initializer().run()
+        saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
+        self.restore_model(saver, model_dir)
+
+        def save_imgs(imgs, count):
+            p = os.path.join(save_dir, "inferred_%04d.png" % count)
+            save_concat_images(imgs, img_path=p)
+            print("generated images saved at %s" % p)
+
+        count = 0
+        batch_buffer = list()
+        for labels, source_imgs in source_iter:
+            fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(source_imgs, labels)
+            merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
+            merged_real_images = merge(scale_back(real_imgs), [self.batch_size, 1])
+            merged_pair = np.concatenate([merged_real_images, merged_fake_images], axis=1)
+            batch_buffer.append(merged_pair)
             if len(batch_buffer) == 10:
                 save_imgs(batch_buffer, count)
                 batch_buffer = list()
@@ -465,7 +501,7 @@ class UNet(object):
             print("overwrite %s tensor" % e_var.name, "old_shape ->", e_var.get_shape(), "new shape ->", t.shape)
             self.sess.run(op)
 
-        source_provider = InjectDataProvider(source_obj)
+        source_provider = InjectDataProvider(source_obj, None)
         input_handle, _, eval_handle, _ = self.retrieve_handles()
         for step_idx in range(len(alphas)):
             alpha = alphas[step_idx]

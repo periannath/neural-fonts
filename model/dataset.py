@@ -117,8 +117,12 @@ class TrainDataProvider(object):
 
 
 class InjectDataProvider(object):
-    def __init__(self, obj_path):
+    def __init__(self, obj_path, filter_by=None):
+        self.filter_by = filter_by
         self.data = PickledImageProvider(obj_path)
+        if self.filter_by:
+            print("filter by label ->", filter_by)
+            self.data.examples = filter(lambda e: e[0] in self.filter_by, self.data.examples)
         print("examples -> %d" % len(self.data.examples))
 
     def get_single_embedding_iter(self, batch_size, embedding_id):

@@ -28,6 +28,7 @@ parser.add_argument('--steps', dest='steps', type=int, default=10, help='interpo
 parser.add_argument('--output_gif', dest='output_gif', type=str, default=None, help='output name transition gif')
 parser.add_argument('--uroboros', dest='uroboros', type=int, default=0,
                     help='Shōnen yo, you have stepped into uncharted territory')
+parser.add_argument('--compare', dest='compare', type=int, default=0, help='Compare with original font image')
 args = parser.parse_args()
 
 
@@ -43,7 +44,11 @@ def main(_):
         if not args.interpolate:
             if len(embedding_ids) == 1:
                 embedding_ids = embedding_ids[0]
-            model.infer(model_dir=args.model_dir, source_obj=args.source_obj, embedding_ids=embedding_ids,
+            if args.compare:
+                model.infer_compare(model_dir=args.model_dir, source_obj=args.source_obj, embedding_ids=embedding_ids,
+                        save_dir=args.save_dir)
+            else:
+                model.infer(model_dir=args.model_dir, source_obj=args.source_obj, embedding_ids=embedding_ids,
                         save_dir=args.save_dir)
         else:
             if len(embedding_ids) < 2:

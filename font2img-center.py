@@ -74,9 +74,20 @@ def filter_recurring_hash(charset, font, canvas_size, x_offset, y_offset):
     recurring_hashes = filter(lambda d: d[1] > 2, hash_count.items())
     return [rh[0] for rh in recurring_hashes]
 
+def select_sample(charset):
+    # this returns 399 samples from KR charset
+    # we selected 399 characters to sample as uniformly as possible
+    # (the number of each ChoSeong is fixed to 21 (i.e., 21 Giyeok, 21 Nieun ...))
+    # Given the designs of these 399 characters, the rest of Hangeul will be generated
+    samples = []
+    for i in range(399):
+        samples.append(charset[28*i+(i%28)])
+        samples.append(charset[28*i+(i%28)+14])
+    np.random.shuffle(samples)
+    return samples
 
 def font2img(src, dst, charset, char_size, canvas_size,
-             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True):
+             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, fixed_sample=False):
     src_font = ImageFont.truetype(src, size=char_size)
     dst_font = ImageFont.truetype(dst, size=char_size)
 
@@ -91,6 +102,31 @@ def font2img(src, dst, charset, char_size, canvas_size,
         print("filter hashes -> %s" % (",".join([str(h) for h in filter_hashes])))
 
     count = 0
+
+    if fixed_sample:
+        train_set = select_sample(charset)
+        for c in train_set:
+            e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes)
+            if e:
+                e.save(os.path.join(sample_dir, "%d_%04d_train.jpg" % (label, count)))
+                count += 1
+                if count % 100 == 0:
+                    print("processed %d chars" % count)
+        
+        np.random.shuffle(charset)
+        count = 0
+        for c in charset:
+            if count == sample_count:
+                break
+            if c in train_set:
+                continue
+            e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes=set())
+            if e:
+                e.save(os.path.join(sample_dir, "%d_%04d_val.jpg" % (label, count)))
+                count += 1
+                if count % 100 == 0:
+                    print("processed %d chars" % count)
+        return
 
     for c in charset:
         if count == sample_count:
@@ -115,6 +151,7 @@ parser.add_argument('--y_offset', dest='y_offset', type=int, default=20, help='y
 parser.add_argument('--sample_count', dest='sample_count', type=int, default=1000, help='number of characters to draw')
 parser.add_argument('--sample_dir', dest='sample_dir', help='directory to save examples')
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
+parser.add_argument('--fixed_sample', dest='fixed_sample', type=int, default=0, help='pick fixed samples (399 training set, 500 test set). Note that this should not be used with --suffle.')
 
 args = parser.parse_args()
 
@@ -126,4 +163,4 @@ if __name__ == "__main__":
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
              args.canvas_size, args.x_offset, args.y_offset,
-             args.sample_count, args.sample_dir, args.label, args.filter)
+             args.sample_count, args.sample_dir, args.label, args.filter, args.fixed_sample)

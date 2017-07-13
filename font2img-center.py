@@ -82,7 +82,6 @@ def select_sample(charset):
     samples = []
     for i in range(399):
         samples.append(charset[28*i+(i%28)])
-        samples.append(charset[28*i+(i%28)+14])
     np.random.shuffle(samples)
     return samples
 

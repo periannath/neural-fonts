@@ -29,6 +29,7 @@ parser.add_argument('--output_gif', dest='output_gif', type=str, default=None, h
 parser.add_argument('--uroboros', dest='uroboros', type=int, default=0,
                     help='Shōnen yo, you have stepped into uncharted territory')
 parser.add_argument('--compare', dest='compare', type=int, default=0, help='Compare with original font image')
+parser.add_argument('--show_ssim', dest='show_ssim', type=int, default=0, help='Visualize ssim in the result image')
 args = parser.parse_args()
 
 
@@ -46,7 +47,7 @@ def main(_):
                 embedding_ids = embedding_ids[0]
             if args.compare:
                 model.infer_compare(model_dir=args.model_dir, source_obj=args.source_obj, embedding_ids=embedding_ids,
-                        save_dir=args.save_dir)
+                        save_dir=args.save_dir, show_ssim=args.show_ssim)
             else:
                 model.infer(model_dir=args.model_dir, source_obj=args.source_obj, embedding_ids=embedding_ids,
                         save_dir=args.save_dir)

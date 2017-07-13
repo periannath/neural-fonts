@@ -11,6 +11,8 @@ from collections import namedtuple
 from .ops import conv2d, deconv2d, lrelu, fc, batch_norm, init_embedding, conditional_instance_norm
 from .dataset import TrainDataProvider, InjectDataProvider, NeverEndingLoopingProvider
 from .utils import scale_back, merge, save_concat_images
+from skimage.measure import compare_ssim as ssim
+from scipy import ndimage
 
 # Auxiliary wrapper classes
 # Used to save handles(important nodes in computation graph) for later evaluation
@@ -421,7 +423,7 @@ class UNet(object):
             save_imgs(batch_buffer, count)
 
 
-    def infer_compare(self, source_obj, embedding_ids, model_dir, save_dir):
+    def infer_compare(self, source_obj, embedding_ids, model_dir, save_dir, show_ssim):
         if isinstance(embedding_ids, int) or len(embedding_ids) == 1:
             source_provider = InjectDataProvider(source_obj, [embedding_ids])
             embedding_id = embedding_ids if isinstance(embedding_ids, int) else embedding_ids[0]
@@ -440,13 +442,32 @@ class UNet(object):
             save_concat_images(imgs, img_path=p)
             print("generated images saved at %s" % p)
 
+        def mse(img1, img2):
+            return np.linalg.norm(img1 - img2)
+
         count = 0
+        ssim_sum = 0
+        sample_num = 0
+        S = []
         batch_buffer = list()
         for labels, source_imgs in source_iter:
             fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(source_imgs, labels)
+            if show_ssim:
+                S = np.empty([self.batch_size, 256, 256, 3])
+            for i in range(len(fake_imgs)):
+                fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
+                ssim_i = ssim(fake_imgs[i], real_imgs[i], multichannel=True)
+                if show_ssim:
+                    mean, Ssim = ssim(fake_imgs[i], real_imgs[i], full=True, multichannel=True)
+                    S[i]=Ssim
+                ssim_sum = ssim_sum + ssim_i
+                sample_num = sample_num + 1
+#                print("[%d] SSIM: %.5f" % (sample_num, ssim_i))
             merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
             merged_real_images = merge(scale_back(real_imgs), [self.batch_size, 1])
             merged_pair = np.concatenate([merged_real_images, merged_fake_images], axis=1)
+            if show_ssim:
+                merged_pair = np.concatenate([merged_pair, merge(scale_back(S), [self.batch_size, 1])], axis=1)
             batch_buffer.append(merged_pair)
             if len(batch_buffer) == 10:
                 save_imgs(batch_buffer, count)
@@ -455,6 +476,7 @@ class UNet(object):
         if batch_buffer:
             # last batch
             save_imgs(batch_buffer, count)
+        print("Average SSIM: %.5f" % (ssim_sum/sample_num))
 
     def interpolate(self, source_obj, between, model_dir, save_dir, steps):
         tf.global_variables_initializer().run()

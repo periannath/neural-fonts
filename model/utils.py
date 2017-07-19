@@ -44,7 +44,8 @@ def read_split_image(img):
 
 
 def shift_and_resize_image(img, shift_x, shift_y, nw, nh):
-    w, h, _ = img.shape
+#    w, h, _ = img.shape
+    w, h = img.shape
     enlarged = misc.imresize(img, [nw, nh])
     return enlarged[shift_x:shift_x + w, shift_y:shift_y + h]
 

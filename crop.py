@@ -4,7 +4,7 @@ import argparse
 from PIL import Image
 from PIL import ImageFilter
 
-f = open("random.txt", "r")
+f = open("399chars.txt", "r")
 
 def crop_image(src_dir, dst_dir):
     if not os.path.exists(dst_dir):

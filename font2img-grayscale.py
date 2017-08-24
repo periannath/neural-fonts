@@ -97,7 +97,7 @@ def draw_handwriting(ch, src_font, canvas_size, src_offset, dst_folder):
     return example_img
 
 def font2img(src, dst, charset, char_size, canvas_size,
-             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, fixed_sample=False, all_sample=False, handwriting_folder=False):
+             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, fixed_sample=False, all_sample=False, handwriting_dir=False):
     src_font = ImageFont.truetype(src, size=char_size)
     dst_font = ImageFont.truetype(dst, size=char_size)
 
@@ -113,10 +113,12 @@ def font2img(src, dst, charset, char_size, canvas_size,
 
     count = 0
 
-    if handwriting_folder:
+    if handwriting_dir:
+        if not os.path.exists(sample_dir):
+            os.makedirs(sample_dir)
         train_set = select_sample(charset)
         for c in train_set:
-            e = draw_handwriting(c, src_font, canvas_size, [x_offset, y_offset], handwriting_folder)
+            e = draw_handwriting(c, src_font, canvas_size, [x_offset, y_offset], handwriting_dir)
             if e:
                 e.save(os.path.join(sample_dir, "%d_%04d_train.png" % (label, count)))
                 count += 1
@@ -184,7 +186,7 @@ parser.add_argument('--sample_dir', dest='sample_dir', help='directory to save e
 parser.add_argument('--label', dest='label', type=int, default=0, help='label as the prefix of examples')
 parser.add_argument('--fixed_sample', dest='fixed_sample', type=int, default=0, help='pick fixed samples (399 training set, 500 test set). Note that this should not be used with --suffle.')
 parser.add_argument('--all_sample', dest='all_sample', type=int, default=0, help='pick all possible samples (except for missing characters)')
-parser.add_argument('--handwriting_folder', dest='handwriting_folder', default=0, help='pick handwriting samples (399 training set). Note that this should not be used with --suffle.')
+parser.add_argument('--handwriting_dir', dest='handwriting_dir', default=0, help='pick handwriting samples (399 training set). Note that this should not be used with --suffle.')
 
 args = parser.parse_args()
 
@@ -196,4 +198,4 @@ if __name__ == "__main__":
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
              args.canvas_size, args.x_offset, args.y_offset,
-             args.sample_count, args.sample_dir, args.label, args.filter, args.fixed_sample, args.all_sample, args.handwriting_folder)
+             args.sample_count, args.sample_dir, args.label, args.filter, args.fixed_sample, args.all_sample, args.handwriting_dir)

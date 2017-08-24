@@ -56,6 +56,8 @@ parser.add_argument('--fixed_sample', dest='fixed_sample', default=0, help='bina
 args = parser.parse_args()
 
 if __name__ == "__main__":
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir)
     train_path = os.path.join(args.save_dir, "train.obj")
     val_path = os.path.join(args.save_dir, "val.obj")
     pickle_examples(sorted(glob.glob(os.path.join(args.dir, "*.png")), key=lambda e: float(os.path.splitext(os.path.basename(e))[0].replace("_","").replace("train","").replace("val",""))), train_path=train_path, val_path=val_path,

@@ -56,8 +56,8 @@ def get_batch_iter(examples, batch_size, augment):
                 shift_y = int(np.ceil(np.random.uniform(0.01, nh - h)))
                 img_A = shift_and_resize_image(img_A, shift_x, shift_y, nw, nh)
                 img_B = shift_and_resize_image(img_B, shift_x, shift_y, nw, nh)
-            img_A = normalize_image(img_A).reshape((256,256,1))
-            img_B = normalize_image(img_B).reshape((256,256,1))
+            img_A = normalize_image(img_A).reshape((128,128,1))
+            img_B = normalize_image(img_B).reshape((128,128,1))
             return np.concatenate((img_A, img_B), axis=2)
         finally:
             img.close()
@@ -74,18 +74,23 @@ def get_batch_iter(examples, batch_size, augment):
 
 
 class TrainDataProvider(object):
-    def __init__(self, data_dir, train_name="train.obj", val_name="val.obj", filter_by=None):
+    def __init__(self, data_dir, train_name="train.obj", val_name="val.obj", filter_by=None, no_val=False):
         self.data_dir = data_dir
         self.filter_by = filter_by
         self.train_path = os.path.join(self.data_dir, train_name)
         self.val_path = os.path.join(self.data_dir, val_name)
         self.train = PickledImageProvider(self.train_path)
-        self.val = PickledImageProvider(self.val_path)
+        if not no_val:
+            self.val = PickledImageProvider(self.val_path)
         if self.filter_by:
             print("filter by label ->", filter_by)
             self.train.examples = filter(lambda e: e[0] in self.filter_by, self.train.examples)
-            self.val.examples = filter(lambda e: e[0] in self.filter_by, self.val.examples)
-        print("train examples -> %d, val examples -> %d" % (len(self.train.examples), len(self.val.examples)))
+            if not no_val:
+                self.val.examples = filter(lambda e: e[0] in self.filter_by, self.val.examples)
+        if not no_val:
+            print("train examples -> %d, val examples -> %d" % (len(self.train.examples), len(self.val.examples)))
+        else:
+            print("train examples -> %d" % (len(self.train.examples)))
 
     def get_train_iter(self, batch_size, shuffle=True):
         training_examples = self.train.examples[:]

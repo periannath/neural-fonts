@@ -24,8 +24,8 @@ SummaryHandle = namedtuple("SummaryHandle", ["d_merged", "g_merged"])
 
 
 class UNet(object):
-    def __init__(self, experiment_dir=None, experiment_id=0, batch_size=16, input_width=256, output_width=256,
-                 generator_dim=64, discriminator_dim=64, L1_penalty=100, Lconst_penalty=15, Ltv_penalty=0.0,
+    def __init__(self, experiment_dir=None, experiment_id=0, batch_size=16, input_width=128, output_width=128,
+                 generator_dim=64, discriminator_dim=32, L1_penalty=100, Lconst_penalty=15, Ltv_penalty=0.0,
                  Lcategory_penalty=1.0, embedding_num=40, embedding_dim=128, input_filters=1, output_filters=1):
         self.experiment_dir = experiment_dir
         self.experiment_id = experiment_id
@@ -453,7 +453,7 @@ class UNet(object):
         for labels, source_imgs in source_iter:
             fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(source_imgs, labels)
             if show_ssim:
-                S = np.empty([self.batch_size, 256, 256, 3])
+                S = np.empty([self.batch_size, 128, 128, 1])
             for i in range(len(fake_imgs)):
                 fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
                 ssim_i = ssim(fake_imgs[i], real_imgs[i], multichannel=True)
@@ -552,7 +552,7 @@ class UNet(object):
             self.sess.run(op)
 
     def train(self, lr=0.0002, epoch=100, schedule=10, resume=True, flip_labels=False,
-              freeze_encoder=False, fine_tune=None, sample_steps=50, checkpoint_steps=500):
+              freeze_encoder=False, fine_tune=None, sample_steps=50, checkpoint_steps=500, no_val=False):
         g_vars, d_vars = self.retrieve_trainable_vars(freeze_encoder=freeze_encoder)
         input_handle, loss_handle, _, summary_handle = self.retrieve_handles()
 
@@ -569,9 +569,11 @@ class UNet(object):
         no_target_ids = input_handle.no_target_ids
 
         # filter by one type of labels
-        data_provider = TrainDataProvider(self.data_dir, filter_by=fine_tune)
+        data_provider = TrainDataProvider(self.data_dir, filter_by=fine_tune, no_val=no_val)
         total_batches = data_provider.compute_total_batch_num(self.batch_size)
-        val_batch_iter = data_provider.get_val_iter(self.batch_size)
+        val_batch_iter = 0
+        if not no_val:
+            val_batch_iter = data_provider.get_val_iter(self.batch_size)
 
         saver = tf.train.Saver(max_to_keep=3)
         summary_writer = tf.summary.FileWriter(self.log_dir, self.sess.graph)
@@ -646,7 +648,7 @@ class UNet(object):
                 summary_writer.add_summary(d_summary, counter)
                 summary_writer.add_summary(g_summary, counter)
 
-                if counter % sample_steps == 0:
+                if (not no_val) and counter % sample_steps == 0:
                     # sample the current model states with val data
                     self.validate_model(val_batch_iter, ei, counter)
 

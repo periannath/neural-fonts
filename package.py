@@ -24,12 +24,12 @@ def pickle_examples(paths, train_path, val_path, train_val_split=0.1, fixed_samp
                         img_bytes = f.read()
                         example = (label, img_bytes)
                         if "val" in p:
-                            print("img %s is saved in val.obj" % p)
+#                            print("img %s is saved in val.obj" % p)
                             # validation set
                             pickle.dump(example, fv)
                         else:
                             # training set
-                            print("img %s is saved in train.obj" % p)
+#                            print("img %s is saved in train.obj" % p)
                             pickle.dump(example, ft)
                 return
     with open(train_path, 'wb') as ft:

@@ -12,7 +12,7 @@ parser.add_argument('--experiment_dir', dest='experiment_dir', required=True,
                     help='experiment directory, data, samples,checkpoints,etc')
 parser.add_argument('--experiment_id', dest='experiment_id', type=int, default=0,
                     help='sequence id for the experiments you prepare to run')
-parser.add_argument('--image_size', dest='image_size', type=int, default=256,
+parser.add_argument('--image_size', dest='image_size', type=int, default=128,
                     help="size of your input and output image")
 parser.add_argument('--L1_penalty', dest='L1_penalty', type=int, default=100, help='weight for L1 loss')
 parser.add_argument('--Lconst_penalty', dest='Lconst_penalty', type=int, default=15, help='weight for const loss')
@@ -39,6 +39,8 @@ parser.add_argument('--checkpoint_steps', dest='checkpoint_steps', type=int, def
                     help='number of batches in between two checkpoints')
 parser.add_argument('--flip_labels', dest='flip_labels', type=int, default=None,
                     help='whether flip training data labels or not, in fine tuning')
+parser.add_argument('--no_val', dest='no_val', type=int, default=None,
+                    help='no validation set is given')
 args = parser.parse_args()
 
 
@@ -63,7 +65,7 @@ def main(_):
         model.train(lr=args.lr, epoch=args.epoch, resume=args.resume,
                     schedule=args.schedule, freeze_encoder=args.freeze_encoder, fine_tune=fine_tune_list,
                     sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps,
-                    flip_labels=args.flip_labels)
+                    flip_labels=args.flip_labels, no_val=args.no_val)
 
 
 if __name__ == '__main__':

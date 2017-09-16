@@ -88,6 +88,8 @@ def select_sample(charset):
 def draw_handwriting(ch, src_font, canvas_size, src_offset, dst_folder):
     s = ch.decode('utf-8').encode('raw_unicode_escape').replace("\\u","").upper()
     dst_path = dst_folder + "/uni" + s + ".png"
+    if not os.path.exists(dst_path):
+        return
     dst_img = Image.open(dst_path)
     # check the filter example in the hashes or not
     src_img = draw_single_char(ch, src_font, canvas_size, src_offset[0], src_offset[1])
@@ -116,8 +118,7 @@ def font2img(src, dst, charset, char_size, canvas_size,
     if handwriting_dir:
         if not os.path.exists(sample_dir):
             os.makedirs(sample_dir)
-        train_set = select_sample(charset)
-        for c in train_set:
+        for c in charset:
             e = draw_handwriting(c, src_font, canvas_size, [x_offset, y_offset], handwriting_dir)
             if e:
                 e.save(os.path.join(sample_dir, "%d_%04d_train.png" % (label, count)))

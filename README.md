@@ -12,6 +12,7 @@ GAN을 사용하여 한글 폰트를 자동으로 만들어 주는 프로젝트�
 
 ## Gallery
 ### 필기체 (나눔 붓 폰트)
+
 <table>
   <tr>
     <td><p align="center"><b>Original<b/></p></td>
@@ -24,6 +25,7 @@ GAN을 사용하여 한글 폰트를 자동으로 만들어 주는 프로젝트�
 </table>
 
 ### 고딕체 (푸른전남 폰트)
+
 <table>
   <tr>
     <td><p align="center"><b>Original<b/></p></td>

@@ -85,6 +85,25 @@ def select_sample(charset):
     return samples
 
 
+def select_2350():
+    f = open("kr2350.txt", "r")
+    raw_charset = f.readline()
+    raw_charset = raw_charset.decode('utf-8').strip()
+    raw_charset = raw_charset[1:2351]
+    charset = []
+    for i in range(2350):
+        charset.append(raw_charset[i])
+    np.random.shuffle(charset)
+    return charset
+
+
+def select_2350_train(charset):
+    samples = []
+    for i in range(399):
+        samples.append(charset[i])
+    return samples
+
+
 def draw_handwriting(ch, src_font, canvas_size, src_offset, dst_folder):
     s = ch.decode('utf-8').encode('raw_unicode_escape').replace("\\u","").upper()
     dst_path = dst_folder + "/uni" + s + ".png"
@@ -99,7 +118,7 @@ def draw_handwriting(ch, src_font, canvas_size, src_offset, dst_folder):
     return example_img
 
 def font2img(src, dst, charset, char_size, canvas_size,
-             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, fixed_sample=False, all_sample=False, handwriting_dir=False):
+             x_offset, y_offset, sample_count, sample_dir, label=0, filter_by_hash=True, fixed_sample=False, all_sample=False, handwriting_dir=False, kr_2350=False):
     src_font = ImageFont.truetype(src, size=char_size)
     dst_font = ImageFont.truetype(dst, size=char_size)
 
@@ -122,6 +141,33 @@ def font2img(src, dst, charset, char_size, canvas_size,
             e = draw_handwriting(c, src_font, canvas_size, [x_offset, y_offset], handwriting_dir)
             if e:
                 e.save(os.path.join(sample_dir, "%d_%04d_train.png" % (label, count)))
+                count += 1
+                if count % 100 == 0:
+                    print("processed %d chars" % count)
+        return
+
+    if kr_2350:
+        charset_2350 = select_2350()
+        train_set = select_2350_train(charset_2350)
+        for c in train_set:
+            e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes)
+            if e:
+                e.save(os.path.join(sample_dir, "%d_%04d_train.png" % (label, count)))
+                count += 1
+                if count % 100 == 0:
+                    print("processed %d chars" % count)
+        charset_399 = select_sample(charset)
+        count = 0
+        for c in charset_2350:
+            if count == sample_count:
+                break
+            if c in train_set:
+                continue
+            if c in charset_399:
+                continue
+            e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes=set())
+            if e:
+                e.save(os.path.join(sample_dir, "%d_%04d_val.png" % (label, count)))
                 count += 1
                 if count % 100 == 0:
                     print("processed %d chars" % count)
@@ -188,6 +234,7 @@ parser.add_argument('--label', dest='label', type=int, default=0, help='label as
 parser.add_argument('--fixed_sample', dest='fixed_sample', type=int, default=0, help='pick fixed samples (399 training set, 500 test set). Note that this should not be used with --suffle.')
 parser.add_argument('--all_sample', dest='all_sample', type=int, default=0, help='pick all possible samples (except for missing characters)')
 parser.add_argument('--handwriting_dir', dest='handwriting_dir', default=0, help='pick handwriting samples (399 training set). Note that this should not be used with --suffle.')
+parser.add_argument('--kr_2350', dest='kr_2350', default=0, help='Pick sample from 2350 characters')
 
 args = parser.parse_args()
 
@@ -199,4 +246,4 @@ if __name__ == "__main__":
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,
              args.canvas_size, args.x_offset, args.y_offset,
-             args.sample_count, args.sample_dir, args.label, args.filter, args.fixed_sample, args.all_sample, args.handwriting_dir)
+             args.sample_count, args.sample_dir, args.label, args.filter, args.fixed_sample, args.all_sample, args.handwriting_dir, args.kr_2350)

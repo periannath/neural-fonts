@@ -1,75 +1,23 @@
-# zi2zi: Master Chinese Calligraphy with Conditional Adversarial Networks
+# Neural-fonts - GAN을 활용한 한글 폰트 제작 프로젝트
 
-[![Insight.io](https://insight.io/repoBadge/github.com/kaonashi-tyc/zi2zi)](https://insight.io/github.com/kaonashi-tyc/zi2zi)
-
-<p align="center">
-  <img src="assets/intro.gif" alt="animation", style="width: 350px;"/>
-</p>
+![NanumBrush Generated](assets/NanumBrush-gen15.png)
 
 ## Introduction
+
 Learning eastern asian language typefaces with GAN. zi2zi(字到字, meaning from character to character) is an application and extension of the recent popular [pix2pix](https://github.com/phillipi/pix2pix) model to Chinese characters.
 
 Details could be found in this [**blog post**](https://kaonashi-tyc.github.io/2017/04/06/zi2zi.html).
 
-## Network Structure
-### Original Model
-![alt network](assets/network.png)
-
-The network structure is based off pix2pix with the addition of category embedding and two other losses, category loss and constant loss, from [AC-GAN](https://arxiv.org/abs/1610.09585) and [DTN](https://arxiv.org/abs/1611.02200) respectively.
-
-### Updated Model with Label Shuffling
-
-![alt network](assets/network_v2.png)
-
-After sufficient training, **d_loss** will drop to near zero, and the model's performance plateaued. **Label Shuffling** mitigate this problem by presenting new challenges to the model. 
-
-Specifically, within a given minibatch, for the same set of source characters, we generate two sets of target characters: one with correct embedding labels, the other with the shuffled labels. The shuffled set likely will not have the corresponding target images to compute **L1\_Loss**, but can be used as a good source for all other losses, forcing the model to further generalize beyond the limited set of provided examples. Empirically, label shuffling improves the model's generalization on unseen data with better details, and decrease the required number of characters.
-
-You can enable label shuffling by setting **flip_labels=1** option in **train.py** script. It is recommended that you enable this after **d_loss** flatlines around zero, for further tuning.
-
 ## Gallery
-### Compare with Ground Truth
+### 필기체 (나눔 붓 폰트)
+Generated         | Original
+:-------------------------:|:-------------------------:
+![NanumBrush Generated](assets/NanumBrush-gen15.png)  |  ![NanumBrush Original](assets/NanumBrush-org15.png)
 
-<p align="center">
-<img src="assets/compare3.png" alt="compare" width="600"/>
-</p>
-
-### Brush Writing Fonts
-<p align="center">
-<img src="assets/cj_mix.png" alt="brush"  width="600"/>
-</p>
-
-### Cursive Script (Requested by SNS audience)
-<p align="center">
-<img src="assets/cursive.png" alt="cursive"  width="600"/>
-</p>
-
-
-### Mingchao Style (宋体/明朝体)
-<p align="center">
-<img src="assets/mingchao4.png" alt="gaussian"  width="600"/>
-</p>
-
-### Korean
-<p align="center">
-<img src="assets/kr_mix_v2.png" alt="korean"  width="600"/>
-</p>
-
-### Interpolation
-<p align="center">
-  <img src="assets/transition.png" alt="animation",  width="600"/>
-</p>
-
-### Animation
-<p align="center">
-  <img src="assets/poem.gif" alt="animation",  width="250"/>
-  <img src="assets/ko_wiki.gif" alt="animation", width="250"/>
-</p>
-
-<p align="center">
-  <img src="assets/reddit_bonus_humor_easter_egg.gif" alt="easter egg"  width="300"/>
-</p>
-
+### 고딕체 (푸른전남 폰트)
+Generated         | Original
+:-------------------------:|:-------------------------:
+![PureunJeonnam Generated](assets/Pureun-gen15.png) |  ![PureunJeonnam Original](assets/Pureun-org15.png)
 
 ## How to Use
 ### Step Zero

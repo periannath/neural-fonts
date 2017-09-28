@@ -4,22 +4,24 @@
   <img src="assets/NanumBrush-gen15.png">
 </p>
 
-GAN을 사용하여 일부 글자를 디자이너가 만들면 나머지 글자를 만들어 주는 프로젝트입니다. 중국 폰트를 생성하는 [zi2zi](https://github.com/kaonashi-tyc/zi2zi)를 한글에 맞게 수정하였습니다.
+GAN을 사용하여 한글 폰트를 자동으로 만들어 주는 프로젝트입니다. 
+
+디자이너가 399자만 만들면 딥러닝을 통해서 해당 폰트의 style 정보를 훈련하여 11,172자의 완성형 한글을 생성합니다.
+
+중국 폰트를 생성하는 [zi2zi](https://github.com/kaonashi-tyc/zi2zi)를 한글에 맞게 수정하여 사용하였습니다.
 
 ## Gallery
 ### 필기체 (나눔 붓 폰트)
 Original         | Generated
-:-------------------------:|:-------------------------:
+|-------------------------|-------------------------|
 ![NanumBrush Original](assets/NanumBrush-org15.png) | ![NanumBrush Generated](assets/NanumBrush-gen15.png)  
 
 ### 고딕체 (푸른전남 폰트)
 Original         | Generated
-:-------------------------:|:-------------------------:
+|-------------------------|-------------------------|
 ![PureunJeonnam Original](assets/Pureun-org15.png) | ![PureunJeonnam Generated](assets/Pureun-gen15.png) 
 
-## How to Use
-### Step Zero
-Download tons of fonts as you please
+## 사용법
 ### Requirement
 * Python 2.7
 * CUDA
@@ -38,13 +40,13 @@ First run the below command to get the font images:
 ```sh
 python font2img.py --src_font=src.ttf
                    --dst_font=tgt.otf
-                   --charset=CN 
                    --sample_count=1000
                    --sample_dir=dir
                    --label=0
                    --filter=1
-                   --shuffle=1
+                   --fixed_sample=1
 ```
+Use fixed_sample option to select 399 characters 
 Four default charsets are offered: CN, CN_T(traditional), JP, KR. You can also point it to a one line file, it will generate the images of the characters in it. Note, **filter** option is highly recommended, it will pre sample some characters and filter all the images that have the same hash, usually indicating that character is missing. **label** indicating index in the category embeddings that this font associated with, default to 0.
 
 After obtaining all images, run **package.py** to pickle the images and their corresponding labels into binary format:
@@ -108,17 +110,9 @@ python infer.py --model_dir= checkpoint_dir/
 
 It will run through all the pairs of fonts specified in embedding_ids and interpolate the number of steps as specified. 
 
-### Pretrained Model
-Pretained model can be downloaded [here](https://drive.google.com/open?id=0Bz6mX0EGe2ZuNEFSNWpTQkxPM2c) which is trained with 27 fonts, only generator is saved to reduce the model size. You can use encoder in the this pretrained model to accelerate the training process.
 ## Acknowledgements
 Code derived and rehashed from:
-
-* [pix2pix-tensorflow](https://github.com/yenchenlin/pix2pix-tensorflow) by [yenchenlin](https://github.com/yenchenlin)
-* [Domain Transfer Network](https://github.com/yunjey/domain-transfer-network) by [yunjey](https://github.com/yunjey)
-* [ac-gan](https://github.com/buriburisuri/ac-gan) by [buriburisuri](https://github.com/buriburisuri)
-* [dc-gan](https://github.com/carpedm20/DCGAN-tensorflow) by [carpedm20](https://github.com/carpedm20)
-* [origianl pix2pix torch code](https://github.com/phillipi/pix2pix) by [phillipi](https://github.com/phillipi)
+* [zi2zi](https://github.com/kaonashi-tyc/zi2zi) by [kaonashi-tyc](https://github.com/kaonashi-tyc)
 
 ## License
-Apache 2.0
-
+[MIT License](https://raw.githubusercontent.com/JohnCoates/Aerial/master/LICENSE)

@@ -30,6 +30,7 @@ parser.add_argument('--uroboros', dest='uroboros', type=int, default=0,
                     help='Shōnen yo, you have stepped into uncharted territory')
 parser.add_argument('--compare', dest='compare', type=int, default=0, help='Compare with original font image')
 parser.add_argument('--show_ssim', dest='show_ssim', type=int, default=0, help='Visualize ssim in the result image')
+parser.add_argument('--progress_file', dest='progress_file', type=str, default=None, help='Progress file name. Not used with compare')
 args = parser.parse_args()
 
 
@@ -50,7 +51,7 @@ def main(_):
                         save_dir=args.save_dir, show_ssim=args.show_ssim)
             else:
                 model.infer(model_dir=args.model_dir, source_obj=args.source_obj, embedding_ids=embedding_ids,
-                        save_dir=args.save_dir)
+                        save_dir=args.save_dir, progress_file=args.progress_file)
         else:
             if len(embedding_ids) < 2:
                 raise Exception("no need to interpolate yourself unless you are a narcissist")

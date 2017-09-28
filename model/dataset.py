@@ -66,9 +66,10 @@ def get_batch_iter(examples, batch_size, augment):
         for i in range(0, len(padded), batch_size):
             batch = padded[i: i + batch_size]
             labels = [e[0] for e in batch]
-            processed = [process(e[1]) for e in batch]
+            codes = [e[1] for e in batch]
+            processed = [process(e[2]) for e in batch]
             # stack into tensor
-            yield labels, np.array(processed).astype(np.float32)
+            yield labels, codes, np.array(processed).astype(np.float32)
 
     return batch_iter()
 
@@ -107,8 +108,8 @@ class TrainDataProvider(object):
             np.random.shuffle(val_examples)
         while True:
             val_batch_iter = get_batch_iter(val_examples, batch_size, augment=False)
-            for labels, examples in val_batch_iter:
-                yield labels, examples
+            for labels, codes, examples in val_batch_iter:
+                yield labels, codes, examples
 
     def compute_total_batch_num(self, batch_size):
         """Total padded batch num"""
@@ -134,18 +135,18 @@ class InjectDataProvider(object):
     def get_single_embedding_iter(self, batch_size, embedding_id):
         examples = self.data.examples[:]
         batch_iter = get_batch_iter(examples, batch_size, augment=False)
-        for _, images in batch_iter:
+        for _, codes, images in batch_iter:
             # inject specific embedding style here
             labels = [embedding_id] * batch_size
-            yield labels, images
+            yield labels, codes, images
 
     def get_random_embedding_iter(self, batch_size, embedding_ids):
         examples = self.data.examples[:]
         batch_iter = get_batch_iter(examples, batch_size, augment=False)
-        for _, images in batch_iter:
+        for _, codes, images in batch_iter:
             # inject specific embedding style here
             labels = [random.choice(embedding_ids) for i in range(batch_size)]
-            yield labels, images
+            yield labels, codes, images
 
 
 class NeverEndingLoopingProvider(InjectDataProvider):
@@ -157,5 +158,5 @@ class NeverEndingLoopingProvider(InjectDataProvider):
             # np.random.shuffle(self.data.examples)
             rand_iter = super(NeverEndingLoopingProvider, self) \
                 .get_random_embedding_iter(batch_size, embedding_ids)
-            for labels, images in rand_iter:
-                yield labels, images
+            for labels, codes, images in rand_iter:
+                yield labels, codes, images

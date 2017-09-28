@@ -50,6 +50,7 @@ class UNet(object):
             self.checkpoint_dir = os.path.join(self.experiment_dir, "checkpoint")
             self.sample_dir = os.path.join(self.experiment_dir, "sample")
             self.log_dir = os.path.join(self.experiment_dir, "logs")
+            self.progress_file = os.path.join(self.log_dir, "progress")
 
             if not os.path.exists(self.checkpoint_dir):
                 os.makedirs(self.checkpoint_dir)
@@ -366,7 +367,7 @@ class UNet(object):
         return fake_images, real_images, d_loss, g_loss, l1_loss
 
     def validate_model(self, val_iter, epoch, step):
-        labels, images = next(val_iter)
+        labels, codes, images = next(val_iter)
         fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(images, labels)
         print("Sample: d_loss: %.5f, g_loss: %.5f, l1_loss: %.5f" % (d_loss, g_loss, l1_loss))
 
@@ -390,8 +391,11 @@ class UNet(object):
         gen_saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
         gen_saver.save(self.sess, os.path.join(save_dir, model_name), global_step=0)
 
-    def infer(self, source_obj, embedding_ids, model_dir, save_dir):
+    def infer(self, source_obj, embedding_ids, model_dir, save_dir, progress_file):
         source_provider = InjectDataProvider(source_obj, None)
+
+        with open(progress_file, 'a') as f:
+            f.write("Start")
 
         if isinstance(embedding_ids, int) or len(embedding_ids) == 1:
             embedding_id = embedding_ids if isinstance(embedding_ids, int) else embedding_ids[0]
@@ -408,19 +412,29 @@ class UNet(object):
             save_concat_images(imgs, img_path=p)
             print("generated images saved at %s" % p)
 
+        def save_sample(imgs, code):
+            p = os.path.join(save_dir, "inferred_%s.png" % code)
+            save_concat_images(imgs, img_path=p)
+            print("generated images saved at %s" % p)
+
         count = 0
         batch_buffer = list()
-        for labels, source_imgs in source_iter:
+        for labels, codes, source_imgs in source_iter:
             fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
+            for i in range(len(fake_imgs)):
+                fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
+#                save_sample(fake_imgs[i], codes[i])
             merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
             batch_buffer.append(merged_fake_images)
-            if len(batch_buffer) == 10:
-                save_imgs(batch_buffer, count)
+            if len(batch_buffer) == 1:
+                save_sample(batch_buffer, codes[0])
                 batch_buffer = list()
             count += 1
         if batch_buffer:
             # last batch
             save_imgs(batch_buffer, count)
+        with open(progress_file, 'a') as f:
+            f.write("Done")
 
 
     def infer_compare(self, source_obj, embedding_ids, model_dir, save_dir, show_ssim):
@@ -450,7 +464,7 @@ class UNet(object):
         sample_num = 0
         S = []
         batch_buffer = list()
-        for labels, source_imgs in source_iter:
+        for labels, codes, source_imgs in source_iter:
             fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(source_imgs, labels)
             if show_ssim:
                 S = np.empty([self.batch_size, 128, 128, 1])
@@ -531,7 +545,7 @@ class UNet(object):
             source_iter = source_provider.get_single_embedding_iter(self.batch_size, 0)
             batch_buffer = list()
             count = 0
-            for _, source_imgs in source_iter:
+            for _, codes, source_imgs in source_iter:
                 count += 1
                 labels = [step_idx] * self.batch_size
                 generated, = self.sess.run([eval_handle.generator],
@@ -558,6 +572,9 @@ class UNet(object):
 
         if not self.sess:
             raise Exception("no session registered")
+
+        with open(self.progress_file, 'a') as f:
+            f.write("Start")
 
         learning_rate = tf.placeholder(tf.float32, name="learning_rate")
         d_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.d_loss, var_list=d_vars)
@@ -598,7 +615,7 @@ class UNet(object):
 
             for bid, batch in enumerate(train_batch_iter):
                 counter += 1
-                labels, batch_images = batch
+                labels, codes, batch_images = batch
                 shuffled_ids = labels[:]
                 if flip_labels:
                     np.random.shuffle(shuffled_ids)
@@ -643,8 +660,8 @@ class UNet(object):
                 passed = time.time() - start_time
                 log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
                              "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f, tv_loss: %.5f"
-                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
-                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
+#                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
+#                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
                 summary_writer.add_summary(d_summary, counter)
                 summary_writer.add_summary(g_summary, counter)
 
@@ -653,8 +670,12 @@ class UNet(object):
                     self.validate_model(val_batch_iter, ei, counter)
 
                 if counter % checkpoint_steps == 0:
+                    print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
+                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
                     print("Checkpoint: save checkpoint step %d" % counter)
                     self.checkpoint(saver, counter)
         # save the last checkpoint
         print("Checkpoint: last checkpoint step %d" % counter)
         self.checkpoint(saver, counter)
+        with open(self.progress_file, 'a') as f:
+            f.write("Done")

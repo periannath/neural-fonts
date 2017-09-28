@@ -118,10 +118,26 @@ def font2img(src, dst, charset, char_size, canvas_size,
     if handwriting_dir:
         if not os.path.exists(sample_dir):
             os.makedirs(sample_dir)
+        train_set = []
         for c in charset:
             e = draw_handwriting(c, src_font, canvas_size, [x_offset, y_offset], handwriting_dir)
             if e:
-                e.save(os.path.join(sample_dir, "%d_%04d_train.png" % (label, count)))
+                e.save(os.path.join(sample_dir, "%d_%s_train.png" % (label, c.decode('utf-8').encode('raw_unicode_escape').replace("\\u","").upper())))
+                train_set.append(c)
+                count += 1
+                if count % 100 == 0:
+                    print("processed %d chars" % count)
+
+        np.random.shuffle(charset)
+        count = 0
+        for c in charset:
+            if count == 1000:
+                break
+            if c in train_set:
+                continue
+            e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes=set())
+            if e:
+                e.save(os.path.join(sample_dir, "%d_%s_val.png" % (label, c.decode('utf-8').encode('raw_unicode_escape').replace("\\u","").upper())))
                 count += 1
                 if count % 100 == 0:
                     print("processed %d chars" % count)

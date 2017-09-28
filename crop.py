@@ -72,3 +72,4 @@ if __name__ == "__main__":
     cols = 12
     header_ratio = 16.5/(16.5+42)
     crop_image_uniform(args.src_dir, args.dst_dir)
+#    crop_image_frequency(args.src_dir, args.dst_dir)

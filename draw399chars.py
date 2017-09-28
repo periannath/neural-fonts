@@ -23,21 +23,21 @@ def draw_single_char(ch, font, char_size, x_offset, y_offset):
 
 def drawChars(charset, font, char_size):
     src_font = ImageFont.truetype(font, 150)
-    canvas = Image.new("RGB", (char_size*21, char_size*19), (255, 255, 255))
+    canvas = Image.new("RGB", (char_size*21, char_size*19), (255, 255, 255))  # 42 -> 21
     x_pos = 0
     y_pos = 0
     for c in charset:
         e = draw_single_char(c, src_font, char_size, x_offset=50, y_offset=20)
         canvas.paste(e, (x_pos * char_size, y_pos * char_size))
         x_pos = x_pos + 1
-        if x_pos >= 21:
+        if x_pos >= 21: # 42 -> 21
             x_pos = 0
             y_pos = y_pos + 1
     draw = ImageDraw.Draw(canvas)
-    for i in range(20):
+    for i in range(20): # 41 -> 20
       draw.line([((i+1)*char_size,0), ((i+1)*char_size, char_size*19)], fill = (0, 0, 0), width=5)
     for i in range(18):
-      draw.line([(0, (i+1)*char_size), (char_size*21, (i+1)*char_size)], fill = (0, 0, 0), width=5)
+      draw.line([(0, (i+1)*char_size), (char_size*21, (i+1)*char_size)], fill = (0, 0, 0), width=5) # 42 -> 21
     
     canvas.save("399_image.png")
 
@@ -49,6 +49,7 @@ def select_sample(charset):
     samples = []
     for i in range(399):
         samples.append(charset[28*i+(i%28)])
+#        samples.append(charset[28*i+(i%28)+14])
     return samples
 
 

@@ -1,23 +1,21 @@
 # Neural-fonts - GAN을 활용한 한글 폰트 제작 프로젝트
 
-![NanumBrush Generated](assets/NanumBrush-gen15.png)
+<p align="center">
+  <img src="assets/NanumBrush-gen15.png">
+</p>
 
-## Introduction
-
-Learning eastern asian language typefaces with GAN. zi2zi(字到字, meaning from character to character) is an application and extension of the recent popular [pix2pix](https://github.com/phillipi/pix2pix) model to Chinese characters.
-
-Details could be found in this [**blog post**](https://kaonashi-tyc.github.io/2017/04/06/zi2zi.html).
+GAN을 사용하여 일부 글자를 디자이너가 만들면 나머지 글자를 만들어 주는 프로젝트입니다. 중국 폰트를 생성하는 [zi2zi](https://github.com/kaonashi-tyc/zi2zi)를 한글에 맞게 수정하였습니다.
 
 ## Gallery
 ### 필기체 (나눔 붓 폰트)
-Generated         | Original
+Original         | Generated
 :-------------------------:|:-------------------------:
-![NanumBrush Generated](assets/NanumBrush-gen15.png)  |  ![NanumBrush Original](assets/NanumBrush-org15.png)
+![NanumBrush Original](assets/NanumBrush-org15.png) | ![NanumBrush Generated](assets/NanumBrush-gen15.png)  
 
 ### 고딕체 (푸른전남 폰트)
-Generated         | Original
+Original         | Generated
 :-------------------------:|:-------------------------:
-![PureunJeonnam Generated](assets/Pureun-gen15.png) |  ![PureunJeonnam Original](assets/Pureun-org15.png)
+![PureunJeonnam Original](assets/Pureun-org15.png) | ![PureunJeonnam Generated](assets/Pureun-gen15.png) 
 
 ## How to Use
 ### Step Zero

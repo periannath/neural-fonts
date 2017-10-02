@@ -62,7 +62,7 @@ GAN을 사용하여 한글 폰트를 자동으로 만들어 주는 프로젝트�
 
 32개의 copyleft font에 대하여 pre-train된 model을 다운받아서 사용하거나 원하는 폰트를 사용하여 직접 training을 할 수 있습니다.
 
-> [Pre-trained Model](https://mysnu-my.sharepoint.com/personal/yu65789_seoul_ac_kr/_layouts/15/guestaccess.aspx?docid=08d21503a30b44046b5cfab022c8a0a7d&authkey=AetoxMGkr13GzU-SWsKuN1s)
+> [Pre-trained Model](https://mysnu-my.sharepoint.com/personal/yu65789_seoul_ac_kr/_layouts/15/guestaccess.aspx?docid=0a7fcfabb78af4958b790b98eccac135c&authkey=AVqeaI5jyQHWyklZgotc04Y)
 
 새로 training을 할 경우 [zi2zi](https://github.com/kaonashi-tyc/zi2zi)의 readme를 참조하여 training을 수행하면 됩니다.
 

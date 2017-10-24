@@ -131,10 +131,6 @@ def font2img(src, dst, charset, char_size, canvas_size,
         np.random.shuffle(charset)
         count = 0
         for c in charset:
-            if count == 1000:
-                break
-            if c in train_set:
-                continue
             e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes=set())
             if e:
                 e.save(os.path.join(sample_dir, "%d_%s_val.png" % (label, c.decode('utf-8').encode('raw_unicode_escape').replace("\\u","").upper())))

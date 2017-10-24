@@ -11,6 +11,33 @@ import numpy as np
 from cStringIO import StringIO
 
 
+# get Hangul Jaso offset from unicode (code : a string which represents a hexadecimal unicode)
+def get_hangul_jaso_offset(code):
+    hangul_code = int(code, 16) - 0xAC00
+    jongsung = hangul_code % 28
+    jungsung = ((hangul_code - jongsung) // 28) % 21
+    chosung = (((hangul_code - jongsung) // 28) - jungsung) // 21
+    return (chosung, jungsung, jongsung)
+
+# get Hangul Jaso from unicode
+def get_hangul_jaso(code):
+    rCho = [ "ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ" ]
+    rJung = [ "ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ" ]
+    rJong = [ "", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ" ]
+    (chosung, jungsung, jongsung) = get_hangul_jaso_offset(code)
+    return (rCho[chosung], rJung[jungsung], rJong[jongsung])
+
+def get_hangul_jaso_offset_list(codes):
+    cho_ids = []
+    jung_ids = []
+    jong_ids = []
+    for code in codes:
+        (cho, jung, jong) = get_hangul_jaso_offset(code)
+        cho_ids.append(cho)
+        jung_ids.append(jung)
+        jong_ids.append(jong)
+    return (cho_ids, jung_ids, jong_ids)
+
 def pad_seq(seq, batch_size):
     # pad the sequence to be the multiples of batch_size
     seq_len = len(seq)

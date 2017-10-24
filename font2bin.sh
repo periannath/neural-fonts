@@ -28,7 +28,7 @@ else
     done
     echo "package.py image/$FOLDER binary/$FOLDER/data"
     mkdir -p binary/$FOLDER/data
-    python package.py --dir=image/$FOLDER --save_dir=binary/$FOLDER/data
+    python package.py --dir=image/$FOLDER --save_dir=binary/$FOLDER/data --fixed_sample=1
   else
     echo "Source font 'fonts/$1' not exist"
   fi

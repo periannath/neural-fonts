@@ -10,15 +10,15 @@ import time
 from collections import namedtuple
 from .ops import conv2d, deconv2d, lrelu, fc, batch_norm, init_embedding, conditional_instance_norm
 from .dataset import TrainDataProvider, InjectDataProvider, NeverEndingLoopingProvider
-from .utils import scale_back, merge, save_concat_images
+from .utils import scale_back, merge, save_concat_images, get_hangul_jaso_offset_list
 from skimage.measure import compare_ssim as ssim
 from scipy import ndimage
 
 # Auxiliary wrapper classes
 # Used to save handles(important nodes in computation graph) for later evaluation
 LossHandle = namedtuple("LossHandle", ["d_loss", "g_loss", "const_loss", "l1_loss",
-                                       "category_loss", "cheat_loss", "tv_loss"])
-InputHandle = namedtuple("InputHandle", ["real_data", "embedding_ids", "no_target_data", "no_target_ids"])
+                                       "category_loss", "chosung_loss", "jungsung_loss", "jongsung_loss", "cheat_loss", "tv_loss"])
+InputHandle = namedtuple("InputHandle", ["real_data", "embedding_ids", "chosung_ids", "jungsung_ids", "jongsung_ids", "no_target_data", "no_target_ids"])
 EvalHandle = namedtuple("EvalHandle", ["encoder", "generator", "target", "source", "embedding"])
 SummaryHandle = namedtuple("SummaryHandle", ["d_merged", "g_merged"])
 
@@ -42,6 +42,12 @@ class UNet(object):
         self.embedding_dim = embedding_dim
         self.input_filters = input_filters
         self.output_filters = output_filters
+        self.chosung_num = 19
+        self.jungsung_num = 21
+        self.jongsung_num = 28
+        self.Lchosung_penalty = 15.0
+        self.Ljungsung_penalty = 15.0
+        self.Ljongsung_penalty = 15.0
         # init all the directories
         self.sess = None
         # experiment_dir is needed for training
@@ -129,11 +135,17 @@ class UNet(object):
             output = tf.nn.tanh(d8)  # scale to (-1, 1)
             return output
 
-    def generator(self, images, embeddings, embedding_ids, inst_norm, is_training, reuse=False):
+    def generator(self, images, embeddings, embedding_ids, cho_embeddings, cho_ids, jung_embeddings, jung_ids, jong_embeddings, jong_ids, inst_norm, is_training, reuse=False):
         e8, enc_layers = self.encoder(images, is_training=is_training, reuse=reuse)
         local_embeddings = tf.nn.embedding_lookup(embeddings, ids=embedding_ids)
         local_embeddings = tf.reshape(local_embeddings, [self.batch_size, 1, 1, self.embedding_dim])
-        embedded = tf.concat([e8, local_embeddings], 3)
+        cho_local_embeddings = tf.nn.embedding_lookup(cho_embeddings, ids=cho_ids)
+        cho_local_embeddings = tf.reshape(cho_local_embeddings, [self.batch_size, 1, 1, self.embedding_dim])
+        jung_local_embeddings = tf.nn.embedding_lookup(jung_embeddings, ids=jung_ids)
+        jung_local_embeddings = tf.reshape(jung_local_embeddings, [self.batch_size, 1, 1, self.embedding_dim])
+        jong_local_embeddings = tf.nn.embedding_lookup(jong_embeddings, ids=jong_ids)
+        jong_local_embeddings = tf.reshape(jong_local_embeddings, [self.batch_size, 1, 1, self.embedding_dim])
+        embedded = tf.concat([e8, local_embeddings, cho_local_embeddings, jung_local_embeddings, jong_local_embeddings], 3)
         output = self.decoder(embedded, enc_layers, embedding_ids, inst_norm, is_training=is_training, reuse=reuse)
         return output, e8
 
@@ -152,8 +164,14 @@ class UNet(object):
             fc1 = fc(tf.reshape(h3, [self.batch_size, -1]), 1, scope="d_fc1")
             # category loss
             fc2 = fc(tf.reshape(h3, [self.batch_size, -1]), self.embedding_num, scope="d_fc2")
+            # chosung loss
+            fc3 = fc(tf.reshape(h3, [self.batch_size, -1]), self.chosung_num, scope="d_fc3")
+            # jungsung loss
+            fc4 = fc(tf.reshape(h3, [self.batch_size, -1]), self.jungsung_num, scope="d_fc4")
+            # jongsung loss
+            fc5 = fc(tf.reshape(h3, [self.batch_size, -1]), self.jongsung_num, scope="d_fc5")
 
-            return tf.nn.sigmoid(fc1), fc1, fc2
+            return tf.nn.sigmoid(fc1), fc1, fc2, fc3, fc4, fc5
 
     def build_model(self, is_training=True, inst_norm=False, no_target_source=False):
         real_data = tf.placeholder(tf.float32,
@@ -161,6 +179,9 @@ class UNet(object):
                                     self.input_filters + self.output_filters],
                                    name='real_A_and_B_images')
         embedding_ids = tf.placeholder(tf.int64, shape=None, name="embedding_ids")
+        chosung_ids = tf.placeholder(tf.int64, shape=None, name="chosung_ids")
+        jungsung_ids = tf.placeholder(tf.int64, shape=None, name="jungsung_ids")
+        jongsung_ids = tf.placeholder(tf.int64, shape=None, name="jongsung_ids")
         no_target_data = tf.placeholder(tf.float32,
                                         [self.batch_size, self.input_width, self.input_width,
                                          self.input_filters + self.output_filters],
@@ -173,15 +194,18 @@ class UNet(object):
         real_A = real_data[:, :, :, self.input_filters:self.input_filters + self.output_filters]
 
         embedding = init_embedding(self.embedding_num, self.embedding_dim)
-        fake_B, encoded_real_A = self.generator(real_A, embedding, embedding_ids, is_training=is_training,
+        cho_embedding = init_embedding(self.chosung_num, self.embedding_dim, scope = "cho_embedding")
+        jung_embedding = init_embedding(self.jungsung_num, self.embedding_dim, scope = "jung_embedding")
+        jong_embedding = init_embedding(self.jongsung_num, self.embedding_dim, scope = "jong_embedding")
+        fake_B, encoded_real_A = self.generator(real_A, embedding, embedding_ids, cho_embedding, chosung_ids, jung_embedding, jungsung_ids, jong_embedding, jongsung_ids, is_training=is_training,
                                                 inst_norm=inst_norm)
         real_AB = tf.concat([real_A, real_B], 3)
         fake_AB = tf.concat([real_A, fake_B], 3)
 
         # Note it is not possible to set reuse flag back to False
         # initialize all variables before setting reuse to True
-        real_D, real_D_logits, real_category_logits = self.discriminator(real_AB, is_training=is_training, reuse=False)
-        fake_D, fake_D_logits, fake_category_logits = self.discriminator(fake_AB, is_training=is_training, reuse=True)
+        real_D, real_D_logits, real_category_logits, real_chosung_logits, real_jungsung_logits, real_jongsung_logits = self.discriminator(real_AB, is_training=is_training, reuse=False)
+        fake_D, fake_D_logits, fake_category_logits, fake_chosung_logits, fake_jungsung_logits, fake_jongsung_logits = self.discriminator(fake_AB, is_training=is_training, reuse=True)
 
         # encoding constant loss
         # this loss assume that generated imaged and real image
@@ -197,6 +221,34 @@ class UNet(object):
         fake_category_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_category_logits,
                                                                                     labels=true_labels))
         category_loss = self.Lcategory_penalty * (real_category_loss + fake_category_loss)
+
+
+        # chosung loss
+        true_chosung = tf.reshape(tf.one_hot(indices=chosung_ids, depth=self.chosung_num),
+                                  shape=[self.batch_size, self.chosung_num])
+        real_chosung_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=real_chosung_logits,
+                                                                                    labels=true_chosung))
+        fake_chosung_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_chosung_logits,
+                                                                                    labels=true_chosung))
+        chosung_loss = self.Lchosung_penalty * (real_chosung_loss + fake_chosung_loss)
+
+        # jungsung loss
+        true_jungsung = tf.reshape(tf.one_hot(indices=jungsung_ids, depth=self.jungsung_num),
+                                  shape=[self.batch_size, self.jungsung_num])
+        real_jungsung_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=real_jungsung_logits,
+                                                                                    labels=true_jungsung))
+        fake_jungsung_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_jungsung_logits,
+                                                                                    labels=true_jungsung))
+        jungsung_loss = self.Ljungsung_penalty * (real_jungsung_loss + fake_jungsung_loss)
+
+        # jongsung loss
+        true_jongsung = tf.reshape(tf.one_hot(indices=jongsung_ids, depth=self.jongsung_num),
+                                  shape=[self.batch_size, self.jongsung_num])
+        real_jongsung_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=real_jongsung_logits,
+                                                                                    labels=true_jongsung))
+        fake_jongsung_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_jongsung_logits,
+                                                                                    labels=true_jongsung))
+        jongsung_loss = self.Ljongsung_penalty * (real_jongsung_loss + fake_jongsung_loss)
 
         # binary real/fake loss
         d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=real_D_logits,
@@ -214,8 +266,8 @@ class UNet(object):
         cheat_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D_logits,
                                                                             labels=tf.ones_like(fake_D)))
 
-        d_loss = d_loss_real + d_loss_fake + category_loss / 2.0
-        g_loss = cheat_loss + l1_loss + self.Lcategory_penalty * fake_category_loss + const_loss + tv_loss
+        d_loss = d_loss_real + d_loss_fake + category_loss / 2.0 + chosung_loss / 2.0 + jungsung_loss / 2.0 + jongsung_loss / 2.0
+        g_loss = cheat_loss + l1_loss + self.Lcategory_penalty * fake_category_loss + const_loss + tv_loss + self.Lchosung_penalty * fake_chosung_loss + self.Ljungsung_penalty * fake_jungsung_loss + self.Ljongsung_penalty * fake_jongsung_loss
 
         if no_target_source:
             # no_target source are examples that don't have the corresponding target images
@@ -252,24 +304,36 @@ class UNet(object):
         d_loss_real_summary = tf.summary.scalar("d_loss_real", d_loss_real)
         d_loss_fake_summary = tf.summary.scalar("d_loss_fake", d_loss_fake)
         category_loss_summary = tf.summary.scalar("category_loss", category_loss)
+        chosung_loss_summary = tf.summary.scalar("chosung_loss", chosung_loss)
+        jungsung_loss_summary = tf.summary.scalar("jungsung_loss", jungsung_loss)
+        jongsung_loss_summary = tf.summary.scalar("jongsung_loss", jongsung_loss)
         cheat_loss_summary = tf.summary.scalar("cheat_loss", cheat_loss)
         l1_loss_summary = tf.summary.scalar("l1_loss", l1_loss)
         fake_category_loss_summary = tf.summary.scalar("fake_category_loss", fake_category_loss)
+        fake_chosung_loss_summary = tf.summary.scalar("fake_chosung_loss", fake_chosung_loss)
+        fake_jungsung_loss_summary = tf.summary.scalar("fake_jungsung_loss", fake_jungsung_loss)
+        fake_jongsung_loss_summary = tf.summary.scalar("fake_jongsung_loss", fake_jongsung_loss)
         const_loss_summary = tf.summary.scalar("const_loss", const_loss)
         d_loss_summary = tf.summary.scalar("d_loss", d_loss)
         g_loss_summary = tf.summary.scalar("g_loss", g_loss)
         tv_loss_summary = tf.summary.scalar("tv_loss", tv_loss)
 
         d_merged_summary = tf.summary.merge([d_loss_real_summary, d_loss_fake_summary,
-                                             category_loss_summary, d_loss_summary])
+                                             category_loss_summary, chosung_loss_summary, jungsung_loss_summary, jongsung_loss_summary, d_loss_summary])
         g_merged_summary = tf.summary.merge([cheat_loss_summary, l1_loss_summary,
                                              fake_category_loss_summary,
+                                             fake_chosung_loss_summary,
+                                             fake_jungsung_loss_summary,
+                                             fake_jongsung_loss_summary,
                                              const_loss_summary,
                                              g_loss_summary, tv_loss_summary])
 
         # expose useful nodes in the graph as handles globally
         input_handle = InputHandle(real_data=real_data,
                                    embedding_ids=embedding_ids,
+                                   chosung_ids=chosung_ids,
+                                   jungsung_ids=jungsung_ids,
+                                   jongsung_ids=jongsung_ids,
                                    no_target_data=no_target_data,
                                    no_target_ids=no_target_ids)
 
@@ -278,6 +342,9 @@ class UNet(object):
                                  const_loss=const_loss,
                                  l1_loss=l1_loss,
                                  category_loss=category_loss,
+                                 chosung_loss=chosung_loss,
+                                 jungsung_loss=jungsung_loss,
+                                 jongsung_loss=jongsung_loss,
                                  cheat_loss=cheat_loss,
                                  tv_loss=tv_loss)
 
@@ -350,7 +417,7 @@ class UNet(object):
         else:
             print("fail to restore model %s" % model_dir)
 
-    def generate_fake_samples(self, input_images, embedding_ids):
+    def generate_fake_samples(self, input_images, embedding_ids, chosung_ids, jungsung_ids, jongsung_ids):
         input_handle, loss_handle, eval_handle, summary_handle = self.retrieve_handles()
         fake_images, real_images, \
         d_loss, g_loss, l1_loss = self.sess.run([eval_handle.generator,
@@ -361,6 +428,9 @@ class UNet(object):
                                                 feed_dict={
                                                     input_handle.real_data: input_images,
                                                     input_handle.embedding_ids: embedding_ids,
+                                                    input_handle.chosung_ids: chosung_ids,
+                                                    input_handle.jungsung_ids: jungsung_ids,
+                                                    input_handle.jongsung_ids: jongsung_ids,
                                                     input_handle.no_target_data: input_images,
                                                     input_handle.no_target_ids: embedding_ids
                                                 })
@@ -368,7 +438,8 @@ class UNet(object):
 
     def validate_model(self, val_iter, epoch, step):
         labels, codes, images = next(val_iter)
-        fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(images, labels)
+        (cho_ids, jung_ids, jong_ids) = get_hangul_jaso_offset_list(codes)
+        fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(images, labels, cho_ids, jung_ids, jong_ids)
         print("Sample: d_loss: %.5f, g_loss: %.5f, l1_loss: %.5f" % (d_loss, g_loss, l1_loss))
 
         merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
@@ -420,7 +491,8 @@ class UNet(object):
         count = 0
         batch_buffer = list()
         for labels, codes, source_imgs in source_iter:
-            fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
+            (cho_ids, jung_ids, jong_ids) = get_hangul_jaso_offset_list(codes)
+            fake_imgs = self.generate_fake_samples(source_imgs, labels, cho_ids, jung_ids, jong_ids)[0]
             for i in range(len(fake_imgs)):
                 fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
 #                save_sample(fake_imgs[i], codes[i])
@@ -465,7 +537,8 @@ class UNet(object):
         S = []
         batch_buffer = list()
         for labels, codes, source_imgs in source_iter:
-            fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(source_imgs, labels)
+            (cho_ids, jung_ids, jong_ids) = get_hangul_jaso_offset_list(codes)
+            fake_imgs, real_imgs, d_loss, g_loss, l1_loss = self.generate_fake_samples(source_imgs, labels, cho_ids, jung_ids, jong_ids)
             if show_ssim:
                 S = np.empty([self.batch_size, 128, 128, 1])
             for i in range(len(fake_imgs)):
@@ -582,6 +655,9 @@ class UNet(object):
         tf.global_variables_initializer().run()
         real_data = input_handle.real_data
         embedding_ids = input_handle.embedding_ids
+        chosung_ids = input_handle.chosung_ids
+        jungsung_ids = input_handle.jungsung_ids
+        jongsung_ids = input_handle.jongsung_ids
         no_target_data = input_handle.no_target_data
         no_target_ids = input_handle.no_target_ids
 
@@ -616,6 +692,7 @@ class UNet(object):
             for bid, batch in enumerate(train_batch_iter):
                 counter += 1
                 labels, codes, batch_images = batch
+                (cho_ids, jung_ids, jong_ids) = get_hangul_jaso_offset_list(codes)
                 shuffled_ids = labels[:]
                 if flip_labels:
                     np.random.shuffle(shuffled_ids)
@@ -625,6 +702,9 @@ class UNet(object):
                                                            feed_dict={
                                                                real_data: batch_images,
                                                                embedding_ids: labels,
+                                                               chosung_ids: cho_ids,
+                                                               jungsung_ids: jung_ids,
+                                                               jongsung_ids: jong_ids,
                                                                learning_rate: current_lr,
                                                                no_target_data: batch_images,
                                                                no_target_ids: shuffled_ids
@@ -634,6 +714,9 @@ class UNet(object):
                                                 feed_dict={
                                                     real_data: batch_images,
                                                     embedding_ids: labels,
+                                                    chosung_ids: cho_ids,
+                                                    jungsung_ids: jung_ids,
+                                                    jongsung_ids: jong_ids,
                                                     learning_rate: current_lr,
                                                     no_target_data: batch_images,
                                                     no_target_ids: shuffled_ids
@@ -641,10 +724,13 @@ class UNet(object):
                 # magic move to Optimize G again
                 # according to https://github.com/carpedm20/DCGAN-tensorflow
                 # collect all the losses along the way
-                _, batch_g_loss, category_loss, cheat_loss, \
+                _, batch_g_loss, category_loss, chosung_loss, jungsung_loss, jongsung_loss, cheat_loss, \
                 const_loss, l1_loss, tv_loss, g_summary = self.sess.run([g_optimizer,
                                                                          loss_handle.g_loss,
                                                                          loss_handle.category_loss,
+                                                                         loss_handle.chosung_loss,
+                                                                         loss_handle.jungsung_loss,
+                                                                         loss_handle.jongsung_loss,
                                                                          loss_handle.cheat_loss,
                                                                          loss_handle.const_loss,
                                                                          loss_handle.l1_loss,
@@ -653,15 +739,18 @@ class UNet(object):
                                                                         feed_dict={
                                                                             real_data: batch_images,
                                                                             embedding_ids: labels,
+                                                                            chosung_ids: cho_ids,
+                                                                            jungsung_ids: jung_ids,
+                                                                            jongsung_ids: jong_ids,
                                                                             learning_rate: current_lr,
                                                                             no_target_data: batch_images,
                                                                             no_target_ids: shuffled_ids
                                                                         })
                 passed = time.time() - start_time
                 log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
-                             "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f, tv_loss: %.5f"
-#                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
-#                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
+                             "category_loss: %.5f, cheat_loss: %.5f, const_loss: %.5f, l1_loss: %.5f, tv_loss: %.5f, chosung_loss: %.5f, jungsung_loss: %.5f, jongsung_loss: %.5f"
+                print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
+                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss, chosung_loss, jungsung_loss, jongsung_loss))
                 summary_writer.add_summary(d_summary, counter)
                 summary_writer.add_summary(g_summary, counter)
 
@@ -671,7 +760,7 @@ class UNet(object):
 
                 if counter % checkpoint_steps == 0:
                     print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss,
-                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss))
+                                    category_loss, cheat_loss, const_loss, l1_loss, tv_loss, chosung_loss, jungsung_loss, jongsung_loss))
                     print("Checkpoint: save checkpoint step %d" % counter)
                     self.checkpoint(saver, counter)
         # save the last checkpoint

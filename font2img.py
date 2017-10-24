@@ -178,12 +178,37 @@ def font2img(src, dst, charset, char_size, canvas_size,
                     print("processed %d chars" % count)
         return
 
+    # For learning 32 fonts
+    np.random.shuffle(charset)
+    train_set = []
     for c in charset:
+#        if count == sample_count:
+#            break
+#        e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes)
+#        if e:
+#            e.save(os.path.join(sample_dir, "%d_%04d.png" % (label, count)))
+#            count += 1
+#            if count % 100 == 0:
+#                print("processed %d chars" % count)
         if count == sample_count:
             break
         e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes)
         if e:
-            e.save(os.path.join(sample_dir, "%d_%04d.png" % (label, count)))
+            e.save(os.path.join(sample_dir, "%d_%s_train.png" % (label, c.decode('utf-8').encode('raw_unicode_escape').replace("\\u","").upper())))
+            train_set.append(c)
+            count += 1
+            if count % 100 == 0:
+                print("processed %d chars" % count)
+
+    count = 0
+    for c in charset:
+        if count == sample_count / 5:
+            break
+        if c in train_set:
+            continue
+        e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes)
+        if e:
+            e.save(os.path.join(sample_dir, "%d_%s_val.png" % (label, c.decode('utf-8').encode('raw_unicode_escape').replace("\\u","").upper())))
             count += 1
             if count % 100 == 0:
                 print("processed %d chars" % count)

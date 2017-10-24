@@ -5,6 +5,8 @@ from PIL import Image
 from PIL import ImageOps
 from PIL import ImageFilter
 from PIL import ImageEnhance
+import cv2
+import numpy as np
 
 def crop_image_uniform(src_dir, dst_dir):
     f = open("399-uniform.txt", "r")
@@ -51,13 +53,12 @@ def crop_image_uniform(src_dir, dst_dir):
                     name = dst_dir + "/uni" + code.strip() + ".png"
                     cropped_image = img.crop((left, upper, right, lower))
                     cropped_image = cropped_image.resize((128,128), Image.LANCZOS)
-                    # Remove noise
-                    cropped_image = cropped_image.point(lambda x : 255 if x > 192 else x, 'L')
                     # Increase constrast
                     enhancer = ImageEnhance.Contrast(cropped_image)
                     cropped_image = enhancer.enhance(1.5)
-                    # Using median filter to remove noise
-                    cropped_image = cropped_image.filter(ImageFilter.MedianFilter)
+                    opencv_image = np.array(cropped_image)
+                    opencv_image = cv2.bilateralFilter(opencv_image, 9, 30, 30)
+                    cropped_image = Image.fromarray(opencv_image)
                     cropped_image.save(name)
         print("Processed uniform page " + str(page))
 

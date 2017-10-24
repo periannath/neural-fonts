@@ -5,7 +5,7 @@ from PIL import Image
 from PIL import ImageOps
 from PIL import ImageFilter
 from PIL import ImageEnhance
-import cv2
+from cv2 import bilateralFilter
 import numpy as np
 
 def crop_image_uniform(src_dir, dst_dir):
@@ -57,7 +57,7 @@ def crop_image_uniform(src_dir, dst_dir):
                     enhancer = ImageEnhance.Contrast(cropped_image)
                     cropped_image = enhancer.enhance(1.5)
                     opencv_image = np.array(cropped_image)
-                    opencv_image = cv2.bilateralFilter(opencv_image, 9, 30, 30)
+                    opencv_image = bilateralFilter(opencv_image, 9, 30, 30)
                     cropped_image = Image.fromarray(opencv_image)
                     cropped_image.save(name)
         print("Processed uniform page " + str(page))

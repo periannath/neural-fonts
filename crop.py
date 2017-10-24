@@ -12,13 +12,6 @@ def crop_image_uniform(src_dir, dst_dir):
         os.makedirs(dst_dir)
     for page in range(1,4):
         img = Image.open( src_dir + "/" + str(page) +"-uniform.png").convert('L')
-        # Remove noise
-        img = img.point(lambda x : 255 if x > 192 else x, 'L')
-        # Increase constrast
-        enhancer = ImageEnhance.Contrast(img)
-        img = enhancer.enhance(1.5)
-        # Using median filter to remove noise
-        img = img.filter(ImageFilter.MedianFilter)
 
         width, height = img.size
         cell_width = width/float(cols)
@@ -58,6 +51,13 @@ def crop_image_uniform(src_dir, dst_dir):
                     name = dst_dir + "/uni" + code.strip() + ".png"
                     cropped_image = img.crop((left, upper, right, lower))
                     cropped_image = cropped_image.resize((128,128), Image.LANCZOS)
+                    # Remove noise
+                    cropped_image = cropped_image.point(lambda x : 255 if x > 192 else x, 'L')
+                    # Increase constrast
+                    enhancer = ImageEnhance.Contrast(cropped_image)
+                    cropped_image = enhancer.enhance(1.5)
+                    # Using median filter to remove noise
+                    cropped_image = cropped_image.filter(ImageFilter.MedianFilter)
                     cropped_image.save(name)
         print("Processed uniform page " + str(page))
 

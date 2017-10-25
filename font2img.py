@@ -207,6 +207,8 @@ if __name__ == "__main__":
     charset = []
     for i in range(0xac00,0xd7a4):
         charset.append(unichr(i))
+    for i in range(0x3131,0x3164):
+        charset.append(unichr(i))
     if args.shuffle:
         np.random.shuffle(charset)
     font2img(args.src_font, args.dst_font, charset, args.char_size,

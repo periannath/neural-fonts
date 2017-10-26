@@ -38,6 +38,9 @@ def main(_):
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
 
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir)
+
     with tf.Session(config=config) as sess:
         model = UNet(batch_size=args.batch_size)
         model.register_session(sess)

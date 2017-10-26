@@ -13,6 +13,9 @@ from .dataset import TrainDataProvider, InjectDataProvider, NeverEndingLoopingPr
 from .utils import scale_back, merge, save_concat_images
 from skimage.measure import compare_ssim as ssim
 from scipy import ndimage
+from PIL import Image
+from PIL import ImageEnhance
+from cv2 import bilateralFilter
 
 # Auxiliary wrapper classes
 # Used to save handles(important nodes in computation graph) for later evaluation
@@ -455,7 +458,24 @@ class UNet(object):
             if show_ssim:
                 S = np.empty([self.batch_size, 128, 128, 1])
             for i in range(len(fake_imgs)):
-                fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
+                gray_img = np.uint8(fake_imgs[i][:,:,0]*127.5+127.5)
+
+                #  pil_img = Image.fromarray(gray_img, 'L')
+                #  enhancer = ImageEnhance.Contrast(pil_img)
+                #  en_img = enhancer.enhance(1.5)
+                #  cv_img = np.array(en_img)
+                #  cv_img = bilateralFilter(cv_img, 9, 30, 30)
+                #  fake_imgs[i][:,:,0] = Image.fromarray(cv_img/128.0 - 1)
+
+                pil_img = Image.fromarray(gray_img, 'L')
+                cv_img = np.array(pil_img)
+                cv_img = bilateralFilter(cv_img, 5, 10, 10)
+                pil_img = Image.fromarray(cv_img)
+                enhancer = ImageEnhance.Contrast(pil_img)
+                en_img = enhancer.enhance(1.5)
+                fake_imgs[i][:,:,0] = Image.fromarray(np.array(en_img)/127.5 - 1.)
+
+                #  fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
                 ssim_i = ssim(fake_imgs[i], real_imgs[i], multichannel=True)
                 if show_ssim:
                     mean, Ssim = ssim(fake_imgs[i], real_imgs[i], full=True, multichannel=True)

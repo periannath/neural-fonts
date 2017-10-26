@@ -13,6 +13,9 @@ from .dataset import TrainDataProvider, InjectDataProvider, NeverEndingLoopingPr
 from .utils import scale_back, merge, save_concat_images
 from skimage.measure import compare_ssim as ssim
 from scipy import ndimage
+from PIL import Image
+from PIL import ImageEnhance
+from cv2 import bilateralFilter
 
 # Auxiliary wrapper classes
 # Used to save handles(important nodes in computation graph) for later evaluation
@@ -422,7 +425,18 @@ class UNet(object):
         for labels, codes, source_imgs in source_iter:
             fake_imgs = self.generate_fake_samples(source_imgs, labels)[0]
             for i in range(len(fake_imgs)):
-                fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
+                # Denormalize image
+                gray_img = np.uint8(fake_imgs[i][:,:,0]*127.5+127.5)
+                pil_img = Image.fromarray(gray_img, 'L')
+                # Apply bilateralFilter
+                cv_img = np.array(pil_img)
+                cv_img = bilateralFilter(cv_img, 5, 10, 10)
+                pil_img = Image.fromarray(cv_img)
+                # Increase contrast
+                enhancer = ImageEnhance.Contrast(pil_img)
+                en_img = enhancer.enhance(1.5)
+                # Normalize image
+                fake_imgs[i][:,:,0] = Image.fromarray(np.array(en_img)/127.5 - 1.)
 #                save_sample(fake_imgs[i], codes[i])
             merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
             batch_buffer.append(merged_fake_images)
@@ -469,7 +483,19 @@ class UNet(object):
             if show_ssim:
                 S = np.empty([self.batch_size, 128, 128, 1])
             for i in range(len(fake_imgs)):
-                fake_imgs[i] = ndimage.median_filter(fake_imgs[i], 3)
+                # Denormalize image
+                gray_img = np.uint8(fake_imgs[i][:,:,0]*127.5+127.5)
+                pil_img = Image.fromarray(gray_img, 'L')
+                # Apply bilateralFilter
+                cv_img = np.array(pil_img)
+                cv_img = bilateralFilter(cv_img, 5, 10, 10)
+                pil_img = Image.fromarray(cv_img)
+                # Increase contrast
+                enhancer = ImageEnhance.Contrast(pil_img)
+                en_img = enhancer.enhance(1.5)
+                # Normalize image
+                fake_imgs[i][:,:,0] = Image.fromarray(np.array(en_img)/127.5 - 1.)
+
                 ssim_i = ssim(fake_imgs[i], real_imgs[i], multichannel=True)
                 if show_ssim:
                     mean, Ssim = ssim(fake_imgs[i], real_imgs[i], full=True, multichannel=True)

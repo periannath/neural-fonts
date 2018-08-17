@@ -147,8 +147,7 @@ def font2img(src, dst, charset, char_size, canvas_size,
         return
 
     if kr_2350:
-        charset_2350 = select_2350()
-        train_set = select_2350_train(charset_2350)
+        train_set = select_2350()
         for c in train_set:
             e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes)
             if e:
@@ -156,14 +155,11 @@ def font2img(src, dst, charset, char_size, canvas_size,
                 count += 1
                 if count % 100 == 0:
                     print("processed %d chars" % count)
-        charset_399 = select_sample(charset)
         count = 0
-        for c in charset_2350:
+        for c in charset:
             if count == sample_count:
                 break
             if c in train_set:
-                continue
-            if c in charset_399:
                 continue
             e = draw_example(c, src_font, dst_font, canvas_size, [x_offset, y_offset], dst_offset, filter_hashes=set())
             if e:

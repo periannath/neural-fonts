@@ -20,18 +20,25 @@ def pickle_examples(paths, train_path, val_path, train_val_split=0.1, fixed_samp
                 for p in paths:
                     label = int(os.path.basename(p).split("_")[0])
                     with open(p, 'rb') as f:
-#                        print("img %s" % p, label)
+                        print("img %s" % p, label)
                         img_bytes = f.read()
                         example = (label, img_bytes)
                         if "val" in p:
-#                            print("img %s is saved in val.obj" % p)
+                            #  print("img %s is saved in val.obj" % p)
                             # validation set
                             pickle.dump(example, fv)
-                        else:
+                        elif "train" in p:
                             # training set
-#                            print("img %s is saved in train.obj" % p)
+                            #  print("img %s is saved in train.obj" % p)
                             pickle.dump(example, ft)
-                return
+                        else:
+                            r = random.random()
+                            if r < train_val_split:
+                                pickle.dump(example, fv)
+                            else:
+                                pickle.dump(example, ft)
+        return
+
     with open(train_path, 'wb') as ft:
         with open(val_path, 'wb') as fv:
             for p in paths:
